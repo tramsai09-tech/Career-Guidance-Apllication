@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User's unique ID" },
+        "name": { "type": "string", "description": "User's full name" },
+        "email": { "type": "string", "format": "email", "description": "User's email" },
+        "photoURL": { "type": "string", "description": "User's profile photo URL" },
+        "careerInterests": { "type": "array", "items": { "type": "string" }, "description": "List of career interests" },
+        "careerPreference": { "type": "string", "description": "User's preferred career path" },
+        "socialLinks": {
+          "type": "object",
+          "properties": {
+            "linkedin": { "type": "string" },
+            "github": { "type": "string" }
+          }
+        },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "push": { "type": "boolean" },
+            "email": { "type": "boolean" }
+          }
+        },
+        "privacySettings": {
+          "type": "object",
+          "properties": {
+            "profilePublic": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["uid", "name", "email"]
+    },
+    "CareerPath": {
+      "title": "Career Path",
+      "description": "Definition of a career path",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "skillsRequired": { "type": "array", "items": { "type": "string" } },
+        "roadmap": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["title", "description"]
+    },
+    "SkillProgress": {
+      "title": "Skill Progress",
+      "description": "User's progress in a specific skill",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "skillName": { "type": "string" },
+        "progress": { "type": "number" },
+        "status": { "type": "string", "enum": ["Completed", "In Progress", "Pending"] }
+      },
+      "required": ["userId", "skillName", "progress", "status"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "Message in the AI mentor chat",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "text": { "type": "string" },
+        "sender": { "type": "string", "enum": ["user", "ai"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "text", "sender", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/career_paths/{pathId}": {
+      "schema": "CareerPath",
+      "description": "Available career paths"
+    },
+    "/users/{userId}/skill_progress/{skillId}": {
+      "schema": "SkillProgress",
+      "description": "User skill tracking"
+    },
+    "/users/{userId}/chat_history/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "AI mentor chat history"
+    }
+  }
+}

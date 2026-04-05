@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (from Firebase Auth)
+    // Fields:
+    //   - uid: string (required, matches auth.uid)
+    //   - name: string (required, 1-100 chars)
+    //   - email: string (required, email format)
+    //   - photoURL: string (optional)
+    //   - careerInterests: list (optional)
+    //   - careerPreference: string (optional)
+    //   - socialLinks: map (optional)
+    //   - notifications: map (optional)
+    //   - privacySettings: map (optional)
+    //
+    // Collection: career_paths
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required)
+    //   - description: string (required)
+    //   - skillsRequired: list (required)
+    //   - roadmap: list (required)
+    //
+    // Collection: users/{userId}/skill_progress
+    // Document ID: auto-generated
+    // Fields:
+    //   - userId: string (required, matches parent)
+    //   - skillName: string (required)
+    //   - progress: number (required, 0-100)
+    //   - status: string (required, enum: Completed, In Progress, Pending)
+    //
+    // Collection: users/{userId}/chat_history
+    // Document ID: auto-generated
+    // Fields:
+    //   - userId: string (required, matches parent)
+    //   - text: string (required)
+    //   - sender: string (required, enum: user, ai)
+    //   - timestamp: timestamp (required)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidEmail(data.email);
+    }
+
+    function isValidSkillProgress(data) {
+      return data.keys().hasAll(['userId', 'skillName', 'progress', 'status']) &&
+             data.userId == request.auth.uid &&
+             data.skillName is string && data.skillName.size() > 0 && data.skillName.size() < 200 &&
+             data.progress is number && data.progress >= 0 && data.progress <= 100 &&
+             data.status in ['Completed', 'In Progress', 'Pending'];
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['userId', 'text', 'sender', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 5000 &&
+             data.sender in ['user', 'ai'] &&
+             data.timestamp is timestamp;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /career_paths/{pathId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only admin (manual) can write career paths
+    }
+
+    match /users/{userId}/skill_progress/{skillId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidSkillProgress(request.resource.data);
+      allow update: if isOwner(userId) && isValidSkillProgress(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/chat_history/{messageId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidChatMessage(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+  }
+}
