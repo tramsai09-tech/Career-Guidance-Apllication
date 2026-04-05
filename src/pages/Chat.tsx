@@ -78,7 +78,7 @@ export default function Chat() {
 
       // 2. Generate AI response
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-1.5-flash',
         contents: [
           { role: 'user', parts: [{ text: `You are a career mentor for engineering students. The user's name is ${profile?.name}. Answer their question concisely and helpfully: ${userMsg}` }] }
         ]
@@ -94,9 +94,15 @@ export default function Chat() {
         timestamp: serverTimestamp()
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Chat Error:', error);
-      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/chat_history`);
+      const errorMessage = error.message || "An unknown error occurred while talking to the AI.";
+      
+      // Update UI with the specific error so the user isn't left hanging
+      setMessages(prev => [...prev, { 
+        text: `⚠️ **Oops! AI Error:** ${errorMessage}\n\n*If this says 'API key not valid', please double check the key you pasted into Render!*`, 
+        sender: 'ai' 
+      }]);
     } finally {
       setIsTyping(false);
     }
